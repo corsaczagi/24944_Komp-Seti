@@ -1,4 +1,5 @@
 import time
+import uvicorn
 
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
@@ -161,8 +162,6 @@ async def get_stats():
 
 
 if __name__ == "__main__":
-    import uvicorn
-
     print("\nЗапуск Quotes Parser API")
     print("Документация: http://127.0.0.1:8000/docs")
     print("Сервер на http://127.0.0.1:8000\n")
