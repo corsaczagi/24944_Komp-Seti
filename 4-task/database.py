@@ -1,15 +1,15 @@
+import os
 import psycopg2
-
 from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
 
-
+# Берем параметры из переменных окружения (для Docker)
 DB_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "database": "quotes_db",
-    "user": "parser_user",
-    "password": "mysecret123",
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", 5432)),
+    "database": os.getenv("DB_NAME", "quotes_db"),
+    "user": os.getenv("DB_USER", "parser_user"),
+    "password": os.getenv("DB_PASSWORD", "mysecret123")
 }
 
 
@@ -29,8 +29,7 @@ def get_db_connection():
 def create_table():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS quotes (
                     id SERIAL PRIMARY KEY,
                     url_source VARCHAR(500),
@@ -40,28 +39,24 @@ def create_table():
                     tags_count INTEGER,
                     created_at TIMESTAMP DEFAULT NOW()
                 )
-            """
-            )
-    print("Таблица quotes создана/проверена")
+            """)
+    print("✓ Таблица quotes создана/проверена")
 
 
 def save_quotes_to_db(quotes_data, source_url):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             for quote in quotes_data:
-                cur.execute(
-                    """
+                cur.execute("""
                     INSERT INTO quotes (url_source, quote, author, tags, tags_count)
                     VALUES (%s, %s, %s, %s, %s)
-                """,
-                    (
-                        source_url,
-                        quote["quote"],
-                        quote["author"],
-                        quote["tags"],
-                        quote["tags_count"],
-                    ),
-                )
+                """, (
+                    source_url,
+                    quote["quote"],
+                    quote["author"],
+                    quote["tags"],
+                    quote["tags_count"]
+                ))
     print(f"✓ Сохранено {len(quotes_data)} цитат в БД")
 
 
@@ -71,8 +66,8 @@ def get_all_quotes():
             cur.execute("SELECT * FROM quotes ORDER BY id DESC")
             rows = cur.fetchall()
             for row in rows:
-                if "created_at" in row and row["created_at"]:
-                    row["created_at"] = row["created_at"].isoformat()
+                if 'created_at' in row and row['created_at']:
+                    row['created_at'] = row['created_at'].isoformat()
             return rows
 
 
@@ -87,4 +82,4 @@ def clear_quotes_table():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM quotes")
-    print("Таблица quotes очищена")
+    print("✓ Таблица quotes очищена")
