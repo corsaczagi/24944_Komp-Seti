@@ -44,16 +44,29 @@ DOMAINS = {
 
 def get_final_destination(ip):
     try:
-        cmd = ["sudo", "traceroute", "-4", "-T", "-p", "80", "-n", "-q", "1", "-w", "1", ip]
+        cmd = [
+            "sudo",
+            "traceroute",
+            "-4",
+            "-T",
+            "-p",
+            "80",
+            "-n",
+            "-q",
+            "1",
+            "-w",
+            "1",
+            ip,
+        ]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
         last_hop = None
-        for line in result.stdout.strip().split('\n'):
+        for line in result.stdout.strip().split("\n"):
             if line and line[0].isdigit():
                 parts = line.split()
                 hop_num = parts[0]
-                hop_ip = parts[1] if len(parts) > 1 else '*'
-                rtt = parts[2] if len(parts) > 2 else '*'
+                hop_ip = parts[1] if len(parts) > 1 else "*"
+                rtt = parts[2] if len(parts) > 2 else "*"
                 last_hop = [hop_num, hop_ip, rtt]
 
         if last_hop and last_hop[1] == ip:
