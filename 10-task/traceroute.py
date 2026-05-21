@@ -3,7 +3,6 @@ import subprocess
 import csv
 import sys
 
-
 DOMAINS = {
     "google.com": {
         "ipv4": [
@@ -43,17 +42,26 @@ DOMAINS = {
 }
 
 
-def ping_ip(ip, ip_type):
+def get_final_destination(ip):
     try:
-        cmd = ["ping", "-c", "1", "-W", "2", ip]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        cmd = ["sudo", "traceroute", "-4", "-T", "-p", "80", "-n", "-q", "1", "-w", "1", ip]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 
-        if "64 bytes" in result.stdout:
-            return ["1", ip, "ping_ok"]
+        last_hop = None
+        for line in result.stdout.strip().split('\n'):
+            if line and line[0].isdigit():
+                parts = line.split()
+                hop_num = parts[0]
+                hop_ip = parts[1] if len(parts) > 1 else '*'
+                rtt = parts[2] if len(parts) > 2 else '*'
+                last_hop = [hop_num, hop_ip, rtt]
+
+        if last_hop and last_hop[1] == ip:
+            return [last_hop[0], last_hop[1], last_hop[2]]
         else:
-            return ["0", "*", "unreachable"]
+            return ["-", "-", "not_reached"]
     except Exception:
-        return ["0", "*", "error"]
+        return ["-", "-", "error"]
 
 
 def main():
@@ -65,12 +73,14 @@ def main():
     for domain, ips in DOMAINS.items():
         for ip in ips["ipv4"]:
             total_ips += 1
-            hop = ping_ip(ip, "ipv4")
-            all_results.append([domain, "IPv4", ip, hop[0], hop[1], hop[2]])
-            if hop[2] == "ping_ok":
+            hop = get_final_destination(ip)
+
+            if hop[2] not in ["not_reached", "error"]:
                 successful += 1
             else:
                 failed += 1
+
+            all_results.append([domain, "IPv4", ip, hop[0], hop[1], hop[2]])
 
     with open("dns_traceroute_results.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -80,8 +90,8 @@ def main():
     print("РЕЗУЛЬТАТЫ:")
     print(f"  Успешно сохранено в файл: dns_traceroute_results.csv")
     print(f"  Всего IP-адресов: {total_ips}")
-    print(f"  Успешных ping: {successful}")
-    print(f"  Неудачных ping: {failed}")
+    print(f"  Успешных: {successful}")
+    print(f"  Неудачных: {failed}")
 
 
 if __name__ == "__main__":
