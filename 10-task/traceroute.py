@@ -3,6 +3,7 @@ import subprocess
 import csv
 import sys
 
+
 DOMAINS = {
     "google.com": {
         "ipv4": [
